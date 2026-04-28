@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Don Bosco Theatre - Seat Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .seat {
+            transition: all 0.2s ease;
+        }
+        .seat:hover:not(.occupied) {
+            transform: scale(1.1);
+        }
+        .seat.available {
+            @apply bg-gray-300 cursor-pointer;
+        }
+        .seat.occupied {
+            @apply bg-red-600 cursor-not-allowed;
+        }
+        .seat.selected {
+            @apply bg-blue-500 ring-4 ring-blue-300;
+        }
+        .front-zone {
+            @apply bg-yellow-50 p-4 rounded-lg mb-6;
+        }
+        .back-zone {
+            @apply bg-blue-50 p-4 rounded-lg;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen py-8 px-4">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-900 mb-2">🎭 Don Bosco Theatre</h1>
+                <p class="text-lg text-gray-600">Select Your Seats</p>
+                <p class="text-sm text-gray-500 mt-2">One-Time Performance</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Seat Grid (Left Side) -->
+                <div class="lg:col-span-2">
+                    <!-- Front Zone -->
+                    <div class="front-zone">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">🎬 FRONT ZONE (Premium)</h2>
+                        <div class="text-sm text-gray-600 mb-4">
+                            <span class="font-semibold">Pricing:</span> Adult $20 | Child $12
+                        </div>
+                        <div id="front-seats" class="grid grid-cols-6 gap-3">
+                            <!-- Seats will be generated here -->
+                        </div>
+                    </div>
+
+                    <!-- Back Zone -->
+                    <div class="back-zone">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">🪑 BACK ZONE (Standard)</h2>
+                        <div class="text-sm text-gray-600 mb-4">
+                            <span class="font-semibold">Pricing:</span> Adult $15 | Child $9
+                        </div>
+                        <div id="back-seats" class="grid grid-cols-6 gap-3">
+                            <!-- Seats will be generated here -->
+                        </div>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="mt-8 p-4 bg-white rounded-lg shadow">
+                        <p class="font-semibold text-gray-800 mb-3">Legend:</p>
+                        <div class="flex flex-wrap gap-6">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 bg-gray-300 rounded"></div>
+                                <span class="text-gray-700">Available</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 bg-red-600 rounded"></div>
+                                <span class="text-gray-700">Occupied</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 bg-blue-500 rounded ring-2 ring-blue-300"></div>
+                                <span class="text-gray-700">Selected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Panel (Right Side) -->
+                <div class="bg-white rounded-lg shadow-lg p-6 h-fit sticky top-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6">Your Booking</h3>
+
+                    <!-- Selected Seats List -->
+                    <div class="mb-6">
+                        <p class="text-sm font-semibold text-gray-700 mb-3">Selected Seats:</p>
+                        <div id="selected-seats-list" class="bg-gray-50 p-3 rounded min-h-12 max-h-48 overflow-y-auto">
+                            <p class="text-gray-500 text-sm">No seats selected</p>
+                        </div>
+                    </div>
+
+                    <!-- Ticket Type Selector -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Ticket Type:</label>
+                        <select id="ticket-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="adult">Adult</option>
+                            <option value="child">Child</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">All selected seats will be booked as this type</p>
+                    </div>
+
+                    <!-- Price Summary -->
+                    <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-gray-700">Subtotal:</span>
+                            <span class="font-semibold text-gray-900" id="subtotal">$0.00</span>
+                        </div>
+                        <div class="border-t border-blue-200 pt-2">
+                            <div class="flex justify-between">
+                                <span class="text-lg font-bold text-gray-900">Total:</span>
+                                <span class="text-2xl font-bold text-blue-600" id="total">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <button id="confirm-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed mb-3">
+                        Confirm Booking
+                    </button>
+                    <button id="clear-btn" class="w-full bg-gray-300 text-gray-800 font-semibold py-2 rounded-lg hover:bg-gray-400 transition">
+                        Clear Selection
+                    </button>
+
+                    <!-- Confirmation Message -->
+                    <div id="confirmation-message" class="mt-4 p-3 bg-green-100 text-green-800 rounded hidden">
+                        ✅ Booking confirmed! Check your email for details.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== MOCK DATA ==========
+        // This represents bookings already in the system (other customers)
+        const mockBookings = [
+            { seatNumber: 1, ticketType: 'adult' },
+            { seatNumber: 5, ticketType: 'child' },
+            { seatNumber: 12, ticketType: 'adult' },
+            { seatNumber: 18, ticketType: 'child' },
+            { seatNumber: 22, ticketType: 'adult' },
+        ];
+
+        // Pricing configuration
+        const pricing = {
+            front: { adult: 20, child: 12 },
+            back: { adult: 15, child: 9 }
+        };
+
+        // Seat configuration
+        const seatConfig = {
+            front: { count: 15, rows: 3, cols: 5, zone: 'front' },
+            back: { count: 15, rows: 2, cols: 5, zone: 'back' }
+        };
+
+        // Application state
+        let selectedSeats = new Set(); // Stores selected seat numbers
+        let occupiedSeats = new Set(mockBookings.map(b => b.seatNumber));
+
+        // ========== INITIALIZE ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSeats();
+            attachEventListeners();
+            updatePricing();
+        });
+
+        // ========== SEAT INITIALIZATION ==========
+        function initializeSeats() {
+            // Generate front zone seats (1-15)
+            const frontContainer = document.getElementById('front-seats');
+            for (let i = 1; i <= 15; i++) {
+                frontContainer.appendChild(createSeatButton(i, 'front'));
+            }
+
+            // Generate back zone seats (16-30)
+            const backContainer = document.getElementById('back-seats');
+            for (let i = 16; i <= 30; i++) {
+                backContainer.appendChild(createSeatButton(i, 'back'));
+            }
+
+            console.log('🎭 Seats initialized. Mock bookings:', mockBookings);
+        }
+
+        function createSeatButton(seatNumber, zone) {
+            const button = document.createElement('button');
+            button.className = 'seat w-12 h-12 rounded font-bold text-sm';
+            button.textContent = seatNumber;
+            button.dataset.seatNumber = seatNumber;
+            button.dataset.zone = zone;
+
+            // Set initial state
+            if (occupiedSeats.has(seatNumber)) {
+                button.classList.add('occupied');
+                button.disabled = true;
+            } else {
+                button.classList.add('available');
+            }
+
+            // Attach click handler
+            button.addEventListener('click', () => toggleSeatSelection(seatNumber, button, zone));
+
+            return button;
+        }
+
+        // ========== SEAT SELECTION ==========
+        function toggleSeatSelection(seatNumber, button, zone) {
+            if (occupiedSeats.has(seatNumber)) return; // Can't select occupied seats
+
+            if (selectedSeats.has(seatNumber)) {
+                selectedSeats.delete(seatNumber);
+                button.classList.remove('selected');
+                button.classList.add('available');
+            } else {
+                selectedSeats.add(seatNumber);
+                button.classList.add('selected');
+                button.classList.remove('available');
+            }
+
+            updateSelectedList();
+            updatePricing();
+            console.log('Seat toggled:', seatNumber, '| Selected seats:', Array.from(selectedSeats));
+        }
+
+        // ========== UI UPDATES ==========
+        function updateSelectedList() {
+            const listContainer = document.getElementById('selected-seats-list');
+            const ticketType = document.getElementById('ticket-type').value;
+
+            if (selectedSeats.size === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500 text-sm">No seats selected</p>';
+                return;
+            }
+
+            const seatsArray = Array.from(selectedSeats).sort((a, b) => a - b);
+            const seatsHTML = seatsArray.map(seat => {
+                const zone = seat <= 15 ? 'Front' : 'Back';
+                return `<div class="text-sm text-gray-800 py-1">Seat ${seat} (${zone}) - ${ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}</div>`;
+            }).join('');
+
+            listContainer.innerHTML = seatsHTML;
+        }
+
+        function updatePricing() {
+            const ticketType = document.getElementById('ticket-type').value;
+            let total = 0;
+
+            selectedSeats.forEach(seatNumber => {
+                const zone = seatNumber <= 15 ? 'front' : 'back';
+                total += pricing[zone][ticketType];
+            });
+
+            document.getElementById('subtotal').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+
+            // Enable/disable confirm button
+            document.getElementById('confirm-btn').disabled = selectedSeats.size === 0;
+        }
+
+        // ========== EVENT LISTENERS ==========
+        function attachEventListeners() {
+            document.getElementById('ticket-type').addEventListener('change', () => {
+                updateSelectedList();
+                updatePricing();
+            });
+
+            document.getElementById('confirm-btn').addEventListener('click', confirmBooking);
+            document.getElementById('clear-btn').addEventListener('click', clearSelection);
+        }
+
+        // ========== BOOKING ACTIONS ==========
+        function confirmBooking() {
+            const ticketType = document.getElementById('ticket-type').value;
+            const bookingData = {
+                seats: Array.from(selectedSeats),
+                ticketType: ticketType,
+                total: parseFloat(document.getElementById('total').textContent.replace('$', '')),
+                timestamp: new Date().toISOString()
+            };
+
+            console.log('📋 BOOKING CONFIRMED:', bookingData);
+            console.log('🔔 [FIREBASE ACTION] Save this booking to Firestore collection: "bookings"');
+
+            // Show confirmation message
+            const confirmationMsg = document.getElementById('confirmation-message');
+            confirmationMsg.classList.remove('hidden');
+            setTimeout(() => confirmationMsg.classList.add('hidden'), 5000);
+
+            // Clear selection after 2 seconds
+            setTimeout(clearSelection, 2000);
+        }
+
+        function clearSelection() {
+            selectedSeats.forEach(seatNumber => {
+                const button = document.querySelector(`button[data-seat-number="${seatNumber}"]`);
+                if (button) {
+                    button.classList.remove('selected');
+                    button.classList.add('available');
+                }
+            });
+
+            selectedSeats.clear();
+            updateSelectedList();
+            updatePricing();
+            console.log('🗑️ Selection cleared');
+        }
+    </script>
+</body>
+</html>
