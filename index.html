@@ -1,315 +1,297 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Don Bosco Theatre - Seat Booking</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .seat {
-            transition: all 0.2s ease;
-        }
-        .seat:hover:not(.occupied) {
-            transform: scale(1.1);
-        }
-        .seat.available {
-            @apply bg-gray-300 cursor-pointer;
-        }
-        .seat.occupied {
-            @apply bg-red-600 cursor-not-allowed;
-        }
-        .seat.selected {
-            @apply bg-blue-500 ring-4 ring-blue-300;
-        }
-        .front-zone {
-            @apply bg-yellow-50 p-4 rounded-lg mb-6;
-        }
-        .back-zone {
-            @apply bg-blue-50 p-4 rounded-lg;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don Bosco Theatre - Seat Booking</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase SDK Compat (works with firebase.auth() + firestore easily) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+    .seat {
+        transition: all 0.2s ease;
+    }
+
+    .seat:hover:not(.occupied) {
+        transform: scale(1.1);
+    }
+
+    .available {
+        background: #d1d5db;
+        cursor: pointer;
+    }
+
+    .occupied {
+        background: #dc2626;
+        cursor: not-allowed;
+        color: white;
+    }
+
+    .selected {
+        background: #3b82f6;
+        color: white;
+    }
+</style>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen py-8 px-4">
-        <div class="max-w-6xl mx-auto">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 mb-2">🎭 Don Bosco Theatre</h1>
-                <p class="text-lg text-gray-600">Select Your Seats</p>
-                <p class="text-sm text-gray-500 mt-2">One-Time Performance</p>
-            </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Seat Grid (Left Side) -->
-                <div class="lg:col-span-2">
-                    <!-- Front Zone -->
-                    <div class="front-zone">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">🎬 FRONT ZONE (Premium)</h2>
-                        <div class="text-sm text-gray-600 mb-4">
-                            <span class="font-semibold">Pricing:</span> Adult $20 | Child $12
-                        </div>
-                        <div id="front-seats" class="grid grid-cols-6 gap-3">
-                            <!-- Seats will be generated here -->
-                        </div>
-                    </div>
+<body class="bg-gray-100 p-8">
 
-                    <!-- Back Zone -->
-                    <div class="back-zone">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">🪑 BACK ZONE (Standard)</h2>
-                        <div class="text-sm text-gray-600 mb-4">
-                            <span class="font-semibold">Pricing:</span> Adult $15 | Child $9
-                        </div>
-                        <div id="back-seats" class="grid grid-cols-6 gap-3">
-                            <!-- Seats will be generated here -->
-                        </div>
-                    </div>
+<div class="max-w-5xl mx-auto">
 
-                    <!-- Legend -->
-                    <div class="mt-8 p-4 bg-white rounded-lg shadow">
-                        <p class="font-semibold text-gray-800 mb-3">Legend:</p>
-                        <div class="flex flex-wrap gap-6">
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-gray-300 rounded"></div>
-                                <span class="text-gray-700">Available</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-red-600 rounded"></div>
-                                <span class="text-gray-700">Occupied</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-blue-500 rounded ring-2 ring-blue-300"></div>
-                                <span class="text-gray-700">Selected</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <h1 class="text-4xl font-bold text-center mb-6">
+        🎭 Don Bosco Theatre
+    </h1>
 
-                <!-- Booking Panel (Right Side) -->
-                <div class="bg-white rounded-lg shadow-lg p-6 h-fit sticky top-8">
-                    <h3 class="text-2xl font-bold text-gray-900 mb-6">Your Booking</h3>
+    <!-- AUTH -->
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
 
-                    <!-- Selected Seats List -->
-                    <div class="mb-6">
-                        <p class="text-sm font-semibold text-gray-700 mb-3">Selected Seats:</p>
-                        <div id="selected-seats-list" class="bg-gray-50 p-3 rounded min-h-12 max-h-48 overflow-y-auto">
-                            <p class="text-gray-500 text-sm">No seats selected</p>
-                        </div>
-                    </div>
+        <h2 class="text-xl font-bold mb-4">Login / Sign Up</h2>
 
-                    <!-- Ticket Type Selector -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Ticket Type:</label>
-                        <select id="ticket-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="adult">Adult</option>
-                            <option value="child">Child</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">All selected seats will be booked as this type</p>
-                    </div>
+        <input
+            id="auth-email"
+            type="email"
+            placeholder="Email"
+            class="border p-2 rounded w-full mb-3"
+        >
 
-                    <!-- Price Summary -->
-                    <div class="bg-blue-50 p-4 rounded-lg mb-6">
-                        <div class="flex justify-between mb-2">
-                            <span class="text-gray-700">Subtotal:</span>
-                            <span class="font-semibold text-gray-900" id="subtotal">$0.00</span>
-                        </div>
-                        <div class="border-t border-blue-200 pt-2">
-                            <div class="flex justify-between">
-                                <span class="text-lg font-bold text-gray-900">Total:</span>
-                                <span class="text-2xl font-bold text-blue-600" id="total">$0.00</span>
-                            </div>
-                        </div>
-                    </div>
+        <input
+            id="auth-password"
+            type="password"
+            placeholder="Password"
+            class="border p-2 rounded w-full mb-3"
+        >
 
-                    <!-- Action Buttons -->
-                    <button id="confirm-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed mb-3">
-                        Confirm Booking
-                    </button>
-                    <button id="clear-btn" class="w-full bg-gray-300 text-gray-800 font-semibold py-2 rounded-lg hover:bg-gray-400 transition">
-                        Clear Selection
-                    </button>
+        <div class="flex gap-3 flex-wrap">
+            <button id="login-btn" class="bg-blue-600 text-white px-4 py-2 rounded">
+                Login
+            </button>
 
-                    <!-- Confirmation Message -->
-                    <div id="confirmation-message" class="mt-4 p-3 bg-green-100 text-green-800 rounded hidden">
-                        ✅ Booking confirmed! Check your email for details.
-                    </div>
-                </div>
-            </div>
+            <button id="signup-btn" class="bg-green-600 text-white px-4 py-2 rounded">
+                Sign Up
+            </button>
+
+            <button id="guest-btn" class="bg-gray-600 text-white px-4 py-2 rounded">
+                Continue as Guest
+            </button>
         </div>
+
+        <p id="auth-status" class="mt-4 font-semibold"></p>
     </div>
 
-    <script>
-        // ========== MOCK DATA ==========
-        // This represents bookings already in the system (other customers)
-        const mockBookings = [
-            { seatNumber: 1, ticketType: 'adult' },
-            { seatNumber: 5, ticketType: 'child' },
-            { seatNumber: 12, ticketType: 'adult' },
-            { seatNumber: 18, ticketType: 'child' },
-            { seatNumber: 22, ticketType: 'adult' },
-        ];
+    <!-- SEATS -->
+    <div class="bg-white p-6 rounded-lg shadow">
 
-        // Pricing configuration
-        const pricing = {
-            front: { adult: 20, child: 12 },
-            back: { adult: 15, child: 9 }
-        };
+        <h2 class="text-2xl font-bold mb-4">Select Seats</h2>
 
-        // Seat configuration
-        const seatConfig = {
-            front: { count: 15, rows: 3, cols: 5, zone: 'front' },
-            back: { count: 15, rows: 2, cols: 5, zone: 'back' }
-        };
+        <div id="seats-container" class="grid grid-cols-5 gap-3 mb-6"></div>
 
-        // Application state
-        let selectedSeats = new Set(); // Stores selected seat numbers
-        let occupiedSeats = new Set(mockBookings.map(b => b.seatNumber));
+        <select id="ticket-type" class="border p-2 rounded mb-4">
+            <option value="adult">Adult</option>
+            <option value="child">Child</option>
+        </select>
 
-        // ========== INITIALIZE ==========
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeSeats();
-            attachEventListeners();
-            updatePricing();
-        });
+        <p class="mb-3">
+            Total:
+            <span id="total" class="font-bold">$0.00</span>
+        </p>
 
-        // ========== SEAT INITIALIZATION ==========
-        function initializeSeats() {
-            // Generate front zone seats (1-15)
-            const frontContainer = document.getElementById('front-seats');
-            for (let i = 1; i <= 15; i++) {
-                frontContainer.appendChild(createSeatButton(i, 'front'));
-            }
+        <button
+            id="confirm-btn"
+            class="bg-purple-600 text-white px-5 py-3 rounded"
+        >
+            Confirm Booking
+        </button>
 
-            // Generate back zone seats (16-30)
-            const backContainer = document.getElementById('back-seats');
-            for (let i = 16; i <= 30; i++) {
-                backContainer.appendChild(createSeatButton(i, 'back'));
-            }
+        <div
+            id="confirmation-message"
+            class="hidden mt-4 p-3 rounded bg-green-100 text-green-800"
+        >
+        </div>
 
-            console.log('🎭 Seats initialized. Mock bookings:', mockBookings);
+    </div>
+</div>
+
+<script>
+/* =========================
+   FIREBASE CONFIG
+========================= */
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCNkOS9iIm_TTTKSZHfhIcSw94fZUELyRQ",
+    authDomain: "don-bosco-theatre-7f7ac.firebaseapp.com",
+    projectId: "don-bosco-theatre-7f7ac",
+    storageBucket: "don-bosco-theatre-7f7ac.firebasestorage.app",
+    messagingSenderId: "980744605039",
+    appId: "1:980744605039:web:04f17958f87386f0012c9a",
+    measurementId: "G-1LJFSKEQBV"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.firestore();
+
+console.log("🔥 Firestore connected successfully");
+
+
+/* =========================
+   AUTH
+========================= */
+
+let currentUser = null;
+let isGuest = false;
+
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById("auth-status").textContent =
+            `👤 ${user.email}`;
+    }
+});
+
+document.getElementById("login-btn").addEventListener("click", async () => {
+    const email = document.getElementById("auth-email").value;
+    const password = document.getElementById("auth-password").value;
+
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+        console.log("Login successful");
+    } catch (error) {
+        alert(error.message);
+    }
+});
+
+document.getElementById("signup-btn").addEventListener("click", async () => {
+    const email = document.getElementById("auth-email").value;
+    const password = document.getElementById("auth-password").value;
+
+    try {
+        await firebase.auth().createUserWithEmailAndPassword(email, password);
+        console.log("Sign up successful");
+    } catch (error) {
+        alert(error.message);
+    }
+});
+
+document.getElementById("guest-btn").addEventListener("click", () => {
+    isGuest = true;
+    document.getElementById("auth-status").textContent =
+        "👤 Guest User";
+});
+
+
+/* =========================
+   SEATS
+========================= */
+
+const selectedSeats = new Set();
+const occupiedSeats = new Set([2, 5, 9]);
+
+const prices = {
+    adult: 20,
+    child: 12
+};
+
+function createSeats() {
+    const container = document.getElementById("seats-container");
+
+    for (let i = 1; i <= 20; i++) {
+        const btn = document.createElement("button");
+
+        btn.textContent = i;
+        btn.className = "seat h-12 rounded font-bold";
+
+        if (occupiedSeats.has(i)) {
+            btn.classList.add("occupied");
+            btn.disabled = true;
+        } else {
+            btn.classList.add("available");
         }
 
-        function createSeatButton(seatNumber, zone) {
-            const button = document.createElement('button');
-            button.className = 'seat w-12 h-12 rounded font-bold text-sm';
-            button.textContent = seatNumber;
-            button.dataset.seatNumber = seatNumber;
-            button.dataset.zone = zone;
+        btn.addEventListener("click", () => toggleSeat(i, btn));
 
-            // Set initial state
-            if (occupiedSeats.has(seatNumber)) {
-                button.classList.add('occupied');
-                button.disabled = true;
-            } else {
-                button.classList.add('available');
-            }
+        container.appendChild(btn);
+    }
+}
 
-            // Attach click handler
-            button.addEventListener('click', () => toggleSeatSelection(seatNumber, button, zone));
+function toggleSeat(seatNumber, button) {
+    if (selectedSeats.has(seatNumber)) {
+        selectedSeats.delete(seatNumber);
+        button.classList.remove("selected");
+        button.classList.add("available");
+    } else {
+        selectedSeats.add(seatNumber);
+        button.classList.add("selected");
+        button.classList.remove("available");
+    }
 
-            return button;
-        }
+    updateTotal();
+}
 
-        // ========== SEAT SELECTION ==========
-        function toggleSeatSelection(seatNumber, button, zone) {
-            if (occupiedSeats.has(seatNumber)) return; // Can't select occupied seats
+function updateTotal() {
+    const type = document.getElementById("ticket-type").value;
+    const total = selectedSeats.size * prices[type];
 
-            if (selectedSeats.has(seatNumber)) {
-                selectedSeats.delete(seatNumber);
-                button.classList.remove('selected');
-                button.classList.add('available');
-            } else {
-                selectedSeats.add(seatNumber);
-                button.classList.add('selected');
-                button.classList.remove('available');
-            }
+    document.getElementById("total").textContent =
+        `$${total.toFixed(2)}`;
+}
 
-            updateSelectedList();
-            updatePricing();
-            console.log('Seat toggled:', seatNumber, '| Selected seats:', Array.from(selectedSeats));
-        }
+document.getElementById("ticket-type").addEventListener("change", updateTotal);
 
-        // ========== UI UPDATES ==========
-        function updateSelectedList() {
-            const listContainer = document.getElementById('selected-seats-list');
-            const ticketType = document.getElementById('ticket-type').value;
 
-            if (selectedSeats.size === 0) {
-                listContainer.innerHTML = '<p class="text-gray-500 text-sm">No seats selected</p>';
-                return;
-            }
+/* =========================
+   CONFIRM BOOKING
+========================= */
 
-            const seatsArray = Array.from(selectedSeats).sort((a, b) => a - b);
-            const seatsHTML = seatsArray.map(seat => {
-                const zone = seat <= 15 ? 'Front' : 'Back';
-                return `<div class="text-sm text-gray-800 py-1">Seat ${seat} (${zone}) - ${ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}</div>`;
-            }).join('');
+document.getElementById("confirm-btn").addEventListener("click", confirmBooking);
 
-            listContainer.innerHTML = seatsHTML;
-        }
+async function confirmBooking() {
+    if (selectedSeats.size === 0) {
+        alert("Select at least one seat");
+        return;
+    }
 
-        function updatePricing() {
-            const ticketType = document.getElementById('ticket-type').value;
-            let total = 0;
+    const ticketType = document.getElementById("ticket-type").value;
 
-            selectedSeats.forEach(seatNumber => {
-                const zone = seatNumber <= 15 ? 'front' : 'back';
-                total += pricing[zone][ticketType];
-            });
+    const bookingData = {
+        seats: Array.from(selectedSeats),
+        ticketType: ticketType,
+        total: parseFloat(
+            document.getElementById("total").textContent.replace("$", "")
+        ),
+        timestamp: new Date().toISOString(),
+        userEmail: currentUser
+            ? currentUser.email
+            : "guest@anonymous.com"
+    };
 
-            document.getElementById('subtotal').textContent = `$${total.toFixed(2)}`;
-            document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+    try {
+        const bookingRef = await db.collection("bookings").add(bookingData);
 
-            // Enable/disable confirm button
-            document.getElementById('confirm-btn').disabled = selectedSeats.size === 0;
-        }
+        console.log("✅ Booking saved:", bookingRef.id);
 
-        // ========== EVENT LISTENERS ==========
-        function attachEventListeners() {
-            document.getElementById('ticket-type').addEventListener('change', () => {
-                updateSelectedList();
-                updatePricing();
-            });
+        const msg = document.getElementById("confirmation-message");
+        msg.classList.remove("hidden");
+        msg.innerHTML =
+            `✅ Booking confirmed! Reference: ${bookingRef.id}`;
 
-            document.getElementById('confirm-btn').addEventListener('click', confirmBooking);
-            document.getElementById('clear-btn').addEventListener('click', clearSelection);
-        }
+    } catch (error) {
+        console.error(error);
+        alert("Booking failed: " + error.message);
+    }
+}
 
-        // ========== BOOKING ACTIONS ==========
-        function confirmBooking() {
-            const ticketType = document.getElementById('ticket-type').value;
-            const bookingData = {
-                seats: Array.from(selectedSeats),
-                ticketType: ticketType,
-                total: parseFloat(document.getElementById('total').textContent.replace('$', '')),
-                timestamp: new Date().toISOString()
-            };
 
-            console.log('📋 BOOKING CONFIRMED:', bookingData);
-            console.log('🔔 [FIREBASE ACTION] Save this booking to Firestore collection: "bookings"');
+/* =========================
+   START
+========================= */
 
-            // Show confirmation message
-            const confirmationMsg = document.getElementById('confirmation-message');
-            confirmationMsg.classList.remove('hidden');
-            setTimeout(() => confirmationMsg.classList.add('hidden'), 5000);
+createSeats();
+</script>
 
-            // Clear selection after 2 seconds
-            setTimeout(clearSelection, 2000);
-        }
-
-        function clearSelection() {
-            selectedSeats.forEach(seatNumber => {
-                const button = document.querySelector(`button[data-seat-number="${seatNumber}"]`);
-                if (button) {
-                    button.classList.remove('selected');
-                    button.classList.add('available');
-                }
-            });
-
-            selectedSeats.clear();
-            updateSelectedList();
-            updatePricing();
-            console.log('🗑️ Selection cleared');
-        }
-    </script>
 </body>
 </html>
